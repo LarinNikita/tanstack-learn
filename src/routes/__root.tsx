@@ -6,6 +6,8 @@ import { ThemeProvider } from '@/lib/theme-provider'
 
 import appCss from '../styles.css?url'
 
+import { Toaster } from '@/components/ui/sonner'
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -37,7 +39,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <Toaster closeButton position="top-center" />
+          {children}
+        </ThemeProvider>
         <TanStackDevtools
           config={{
             position: 'bottom-right',
