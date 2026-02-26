@@ -1,17 +1,13 @@
-import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { useForm } from '@tanstack/react-form'
+import { Link, useNavigate } from '@tanstack/react-router'
+
+import { authClient } from '@/lib/auth-client'
 
 import { signupSchema } from '@/schemas/auth'
 
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
 import {
   Card,
   CardContent,
@@ -19,8 +15,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 
 export function SignupForm() {
+  const navigate = useNavigate()
+
   const form = useForm({
     defaultValues: {
       fullName: '',
@@ -31,7 +36,23 @@ export function SignupForm() {
       onSubmit: signupSchema,
     },
     onSubmit: async ({ value }) => {
-      console.log(value)
+      await authClient.signUp.email({
+        name: value.fullName,
+        email: value.email,
+        password: value.password,
+        callbackURL: '/dashboard',
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success('Account created successfully')
+            navigate({
+              to: '/dashboard',
+            })
+          },
+          onError: ({ error }) => {
+            toast.error(error.message)
+          },
+        },
+      })
     },
   })
 

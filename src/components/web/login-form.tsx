@@ -1,5 +1,8 @@
-import { Link } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { useForm } from '@tanstack/react-form'
+import { Link, useNavigate } from '@tanstack/react-router'
+
+import { authClient } from '@/lib/auth-client'
 
 import { loginSchema } from '@/schemas/auth'
 
@@ -21,6 +24,8 @@ import {
 } from '@/components/ui/field'
 
 export function LoginForm() {
+  const navigate = useNavigate()
+
   const form = useForm({
     defaultValues: {
       email: '',
@@ -30,7 +35,22 @@ export function LoginForm() {
       onSubmit: loginSchema,
     },
     onSubmit: async ({ value }) => {
-      console.log(value)
+      await authClient.signIn.email({
+        email: value.email,
+        password: value.password,
+        callbackURL: '/dashboard',
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success('Logged in successfully')
+            navigate({
+              to: '/dashboard',
+            })
+          },
+          onError: ({ error }) => {
+            toast.error(error.message)
+          },
+        },
+      })
     },
   })
 
