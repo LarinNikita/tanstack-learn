@@ -1,11 +1,9 @@
 'use client'
 
-import * as React from 'react'
-
 import { Link, linkOptions } from '@tanstack/react-router'
 import { BookmarkIcon, CompassIcon, ImportIcon } from 'lucide-react'
 
-import type { NavPrimaryProps } from '@/lib/types'
+import type { NavPrimaryProps, NavUserProps } from '@/lib/types'
 
 import { NavUser } from './nav-user'
 import { NavPrimary } from './nav-primary'
@@ -42,19 +40,9 @@ const navItems: NavPrimaryProps['items'] = linkOptions([
   },
 ])
 
-// TODO: Replace with your own user data
-const data = {
-  user: {
-    name: 'John Doe',
-    avatar:
-      'https://images.unsplash.com/photo-1499714608240-22fc6ad53fb2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=76&q=80',
-    email: 'h5l6o@example.com',
-  },
-}
-
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ user }: NavUserProps) {
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -76,7 +64,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavPrimary items={navItems} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
