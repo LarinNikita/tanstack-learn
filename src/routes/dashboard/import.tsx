@@ -1,4 +1,23 @@
+import { useTransition } from 'react'
+
+import { toast } from 'sonner'
+import { useForm } from '@tanstack/react-form'
+import { createFileRoute } from '@tanstack/react-router'
+import { GlobeIcon, LinkIcon, Loader2Icon } from 'lucide-react'
+
+import { scrapeUrlFn } from '@/data/items'
+
+import { bulkImportSchema, importSchema } from '@/schemas/import'
+
+import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import {
   Card,
   CardContent,
@@ -6,20 +25,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { scrapeUrlFn } from '@/data/items'
-import { bulkImportSchema, importSchema } from '@/schemas/import'
-import { useForm } from '@tanstack/react-form'
-import { createFileRoute } from '@tanstack/react-router'
-import { GlobeIcon, LinkIcon, Loader2Icon } from 'lucide-react'
-import { useTransition } from 'react'
 
 export const Route = createFileRoute('/dashboard/import')({
   component: RouteComponent,
@@ -37,8 +42,8 @@ function RouteComponent() {
     },
     onSubmit: ({ value }) => {
       startTransition(async () => {
-        console.log(value)
         await scrapeUrlFn({ data: value })
+        toast.success('URL scraped successfully!')
       })
     },
   })
