@@ -1,16 +1,18 @@
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 
 import { toast } from 'sonner'
 import { useForm } from '@tanstack/react-form'
 import { createFileRoute } from '@tanstack/react-router'
+import type { SearchResultWeb } from '@mendable/firecrawl-js'
 import { GlobeIcon, LinkIcon, Loader2Icon } from 'lucide-react'
 
-import { scrapeUrlFn } from '@/data/items'
+import { bulkScrapeUrlFn, mapUrlFn, scrapeUrlFn } from '@/data/items'
 
 import { bulkImportSchema, importSchema } from '@/schemas/import'
 
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Field,
@@ -32,6 +34,46 @@ export const Route = createFileRoute('/dashboard/import')({
 
 function RouteComponent() {
   const [isPending, startTransition] = useTransition()
+  const [bulkIsPending, bulkStartTransition] = useTransition()
+  const [discoverLinks, setDiscoverLinks] = useState<Array<SearchResultWeb>>([])
+  const [selectedUrls, setSelectedUrls] = useState<Set<string>>(new Set())
+
+  function handleSelectAll() {
+    if (selectedUrls.size === discoverLinks.length) {
+      setSelectedUrls(new Set())
+    } else {
+      setSelectedUrls(new Set(discoverLinks.map((link) => link.url)))
+    }
+  }
+
+  function handleToggleUrl(url: string) {
+    const newSelected = new Set(selectedUrls)
+
+    if (newSelected.has(url)) {
+      newSelected.delete(url)
+    } else {
+      newSelected.add(url)
+    }
+
+    setSelectedUrls(newSelected)
+  }
+
+  function handleBulkImport() {
+    bulkStartTransition(async () => {
+      if (selectedUrls.size === 0) {
+        toast.error('Please select at least one URL')
+        return
+      }
+
+      await bulkScrapeUrlFn({
+        data: {
+          urls: Array.from(selectedUrls),
+        },
+      })
+
+      toast.success(`Successfully imported ${selectedUrls.size} URLs!`)
+    })
+  }
 
   const form = useForm({
     defaultValues: {
@@ -58,7 +100,9 @@ function RouteComponent() {
     },
     onSubmit: ({ value }) => {
       startTransition(async () => {
-        console.log(value)
+        const data = await mapUrlFn({ data: value })
+        setDiscoverLinks(data)
+        toast.success('URLs mapped successfully!')
       })
     },
   })
@@ -133,7 +177,7 @@ function RouteComponent() {
                       {isPending ? (
                         <>
                           <Loader2Icon className="size-4 animate-spin" />
-                          "Processing..."
+                          Processing...
                         </>
                       ) : (
                         'Import URL'
@@ -153,7 +197,7 @@ function RouteComponent() {
                   Discover and import multiple URLs from a website at once.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
@@ -223,7 +267,7 @@ function RouteComponent() {
                       {isPending ? (
                         <>
                           <Loader2Icon className="size-4 animate-spin" />
-                          "Processing..."
+                          Processing...
                         </>
                       ) : (
                         'Import URLs'
@@ -231,6 +275,66 @@ function RouteComponent() {
                     </Button>
                   </FieldGroup>
                 </form>
+                {/* Discover Url list */}
+                {discoverLinks.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">
+                        Fount {discoverLinks.length} links
+                      </p>
+                      <Button
+                        onClick={handleSelectAll}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {selectedUrls.size === discoverLinks.length
+                          ? 'Deselect All'
+                          : 'Select All'}
+                      </Button>
+                    </div>
+                    <div className="max-h-80 space-y-2 overflow-y-auto rounded-md border p-4">
+                      {discoverLinks.map((link) => (
+                        <label
+                          key={link.url}
+                          className="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-md p-2"
+                        >
+                          <Checkbox
+                            checked={selectedUrls.has(link.url)}
+                            onCheckedChange={() => handleToggleUrl(link.url)}
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">
+                              {link.title ?? 'Title has not been found'}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {link.description ??
+                                'Description has not been found'}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {link.url}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    <Button
+                      onClick={handleBulkImport}
+                      disabled={bulkIsPending}
+                      className="w-full"
+                      type="button"
+                    >
+                      {bulkIsPending ? (
+                        <>
+                          <Loader2Icon className="size-4 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        `Import ${selectedUrls.size} URLs`
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
