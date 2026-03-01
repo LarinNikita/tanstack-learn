@@ -1,26 +1,32 @@
+import { useState } from 'react'
+
+import { toast } from 'sonner'
+import { useCompletion } from '@ai-sdk/react'
+import { createFileRoute, Link, useRouter } from '@tanstack/react-router'
 import {
   ArrowLeftIcon,
   CalendarIcon,
   ChevronDownIcon,
   ClockIcon,
   ExternalLinkIcon,
+  Loader2Icon,
+  SparklesIcon,
   UserIcon,
 } from 'lucide-react'
-import { createFileRoute, Link } from '@tanstack/react-router'
 
-import { getItemById } from '@/data/items'
+import { getItemById, saveSummaryAndGenerateTagsFn } from '@/data/items'
 
-import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { MessageResponse } from '@/components/ai-elements/message'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { cn } from '@/lib/utils'
-import { Card, CardContent } from '@/components/ui/card'
-import { useState } from 'react'
-import { MessageResponse } from '@/components/ai-elements/message'
 
 export const Route = createFileRoute('/dashboard/items/$itemId')({
   component: RouteComponent,
@@ -39,8 +45,41 @@ export const Route = createFileRoute('/dashboard/items/$itemId')({
 })
 
 function RouteComponent() {
+  const router = useRouter()
   const data = Route.useLoaderData()
   const [contentOpen, setContentOpen] = useState(false)
+
+  const { completion, complete, isLoading } = useCompletion({
+    api: '/api/ai/summary',
+    initialCompletion: data.summary ? data.summary : undefined,
+    streamProtocol: 'text',
+    body: {
+      itemId: data.id,
+    },
+    onFinish: async (_prompt, completionText) => {
+      await saveSummaryAndGenerateTagsFn({
+        data: {
+          id: data.id,
+          summary: completionText,
+        },
+      })
+
+      toast.success('Summary generated and saved!')
+      router.invalidate()
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    },
+  })
+
+  function handleGenerateSummary() {
+    if (!data.content) {
+      toast.error('No content available to summarize')
+      return
+    }
+
+    complete(data.content)
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 w-full">
@@ -106,8 +145,47 @@ function RouteComponent() {
           </div>
         )}
 
-        {/* // TODO implement summary section */}
-        <p>Summary data</p>
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-primary mb-3">
+                  Summary
+                </h2>
+
+                {completion || data.summary ? (
+                  <MessageResponse>{completion}</MessageResponse>
+                ) : (
+                  <p className="text-muted-foreground italic">
+                    {data.content
+                      ? 'No summary yet. Generate on with AI'
+                      : 'No content available to summarize'}
+                  </p>
+                )}
+              </div>
+
+              {data.content && !data.summary && (
+                <Button
+                  size="sm"
+                  onClick={handleGenerateSummary}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2Icon className="size-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon className="size-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {data.content && (
           <Collapsible open={contentOpen} onOpenChange={setContentOpen}>
