@@ -13,6 +13,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { formatString } from '@/lib/format-string'
 
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -21,6 +22,13 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Empty,
   EmptyContent,
   EmptyDescription,
@@ -28,14 +36,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
 
 const itemsSearchSchema = z.object({
   q: z.string().default(''),
@@ -48,6 +48,17 @@ export const Route = createFileRoute('/dashboard/items/')({
   component: RouteComponent,
   loader: () => ({ itemsPromise: getItemsFn() }),
   validateSearch: zodValidator(itemsSearchSchema),
+  head: () => ({
+    meta: [
+      {
+        title: 'Saved Items',
+      },
+      {
+        property: 'og:title',
+        content: 'Saved Items',
+      },
+    ],
+  }),
 })
 
 function ItemsList({
