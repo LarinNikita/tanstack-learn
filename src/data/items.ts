@@ -1,4 +1,5 @@
 import z from 'zod'
+import { notFound } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 
 import { prisma } from '@/db'
@@ -169,4 +170,22 @@ export const getItemsFn = createServerFn({ method: 'GET' })
     })
 
     return items
+  })
+
+export const getItemById = createServerFn({ method: 'GET' })
+  .middleware([authFnMiddleware])
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ context, data }) => {
+    const item = await prisma.savedItem.findUnique({
+      where: {
+        userId: context.session.user.id,
+        id: data.id,
+      },
+    })
+
+    if (!item) {
+      throw notFound()
+    }
+
+    return item
   })

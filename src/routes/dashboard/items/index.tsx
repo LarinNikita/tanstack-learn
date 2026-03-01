@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, use, useEffect, useState } from 'react'
 
 import z from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'
@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const itemsSearchSchema = z.object({
   q: z.string().default(''),
@@ -45,7 +46,7 @@ type ItemsSearch = z.infer<typeof itemsSearchSchema>
 
 export const Route = createFileRoute('/dashboard/items/')({
   component: RouteComponent,
-  loader: () => getItemsFn(),
+  loader: () => ({ itemsPromise: getItemsFn() }),
   validateSearch: zodValidator(itemsSearchSchema),
 })
 
@@ -56,9 +57,11 @@ function ItemsList({
 }: {
   q: ItemsSearch['q']
   status: ItemsSearch['status']
-  data: Awaited<ReturnType<typeof getItemsFn>>
+  data: ReturnType<typeof getItemsFn>
 }) {
-  const filteredItems = data.filter((item) => {
+  const items = use(data)
+
+  const filteredItems = items.filter((item) => {
     const matchesQuery =
       q === '' ||
       item.title?.toLowerCase().includes(q.toLowerCase()) ||
@@ -77,15 +80,15 @@ function ItemsList({
             <InboxIcon className="size-12" />
           </EmptyMedia>
           <EmptyTitle>
-            {data.length === 0 ? 'No Items saved yet' : 'No results found'}
+            {items.length === 0 ? 'No Items saved yet' : 'No results found'}
           </EmptyTitle>
           <EmptyDescription>
-            {data.length === 0
+            {items.length === 0
               ? 'Import a Url to get started with saving your content'
               : 'Try searching for something else'}
           </EmptyDescription>
         </EmptyHeader>
-        {data.length === 0 && (
+        {items.length === 0 && (
           <EmptyContent>
             <Link to="/dashboard/import" className={buttonVariants()}>
               Import URL
@@ -103,8 +106,12 @@ function ItemsList({
           key={item.id}
           className="group overflow-hidden transition-all hover:shadow-lg pt-0"
         >
-          <Link to="/dashboard" className="block">
-            {item.ogImage && (
+          <Link
+            to="/dashboard/items/$itemId"
+            params={{ itemId: item.id }}
+            className="block"
+          >
+            {item.ogImage ? (
               <div className="aspect-video w-full overflow-hidden bg-muted">
                 <img
                   src={item.ogImage}
@@ -112,6 +119,8 @@ function ItemsList({
                   className="size-full object-cover transition-transform group-hover:scale-105"
                 />
               </div>
+            ) : (
+              <div className="aspect-video w-full overflow-hidden bg-linear-to-r from-[#f83600] to-[#f9d423]" />
             )}
 
             <CardHeader className="space-y-3 pt-4">
@@ -150,7 +159,7 @@ function ItemsList({
 }
 
 function RouteComponent() {
-  const data = Route.useLoaderData()
+  const { itemsPromise } = Route.useLoaderData()
   const navigate = useNavigate({ from: Route.fullPath })
   const { q, status } = Route.useSearch()
   const [searchInput, setSearchInput] = useState(q)
@@ -207,7 +216,34 @@ function RouteComponent() {
           </SelectTrigger>
         </Select>
       </div>
-      <ItemsList q={q} status={status} data={data} />
+
+      <Suspense fallback={<ItemsGridSkeleton />}>
+        <ItemsList q={q} status={status} data={itemsPromise} />
+      </Suspense>
+    </div>
+  )
+}
+
+function ItemsGridSkeleton() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {[
+        Array(4)
+          .fill(0)
+          .map((i) => (
+            <Card key={i} className="overflow-hidden pt-0">
+              <Skeleton className="aspect-video w-full" />
+              <CardHeader className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                  <Skeleton className="size-8 rounded-md" />
+                </div>
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-4 w-40" />
+              </CardHeader>
+            </Card>
+          )),
+      ]}
     </div>
   )
 }
